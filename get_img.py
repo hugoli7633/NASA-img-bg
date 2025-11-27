@@ -15,6 +15,7 @@ params = {
     'hd': True  # Download high-definition image if available
 }
 
+
 # Send the API request and get the response
 response = requests.get(url, params=params)
 
@@ -37,4 +38,5 @@ SPI_SETDESKWALLPAPER = 20
 ctypes.windll.user32.SystemParametersInfoW(SPI_SETDESKWALLPAPER, 0, image_path, 3)
 
 subprocess.call('TASKKILL /F /PID ' + str(os.getpid()), shell=True)
+
 
