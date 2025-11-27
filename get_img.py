@@ -16,6 +16,11 @@ params = {
 }
 
 
+
+
+
+
+
 # Send the API request and get the response
 response = requests.get(url, params=params)
 
