@@ -17,3 +17,4 @@ Setup NASA picture as desktop background
    - 如果不想开机时弹出命令行窗口，可以把 python.exe 换成同目录下的 pythonw.exe
 5. 将快捷方式放入启动项文件夹（ Windows默认在C:\Users\YOUR_USER_NAME\AppData\Roaming\Microsoft\Windows\Start Menu\Programs\Startup ，也可以按 Win+R 输入 `shell:startup` 打开）
 6. 每次启动/重启都会运行该脚本进行桌面背景更新
+   - 开机时如果网络还没连上，脚本会每 10 秒重试一次，最多等待约 1.5 分钟
