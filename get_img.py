@@ -1,6 +1,7 @@
 import requests
 import os
 import ctypes
+import time
 import xml.etree.ElementTree as ET
 from urllib.parse import urlparse, unquote
 
@@ -13,8 +14,16 @@ save_dir = os.path.join(os.path.expanduser('~'), 'Pictures', 'NASA_APOD')
 url = 'https://science.nasa.gov/feed/apod-basic/'
 
 # Send the request and get the response
-response = requests.get(url, timeout=30)
-response.raise_for_status()
+# Right after startup the network may not be ready yet, so retry every 10 seconds
+for attempt in range(10):
+    try:
+        response = requests.get(url, timeout=30)
+        response.raise_for_status()
+        break
+    except requests.RequestException:
+        if attempt == 9:
+            raise
+        time.sleep(10)
 root = ET.fromstring(response.content)
 
 # The feed lists recent APODs, newest first. Some days are videos, so take the newest image
@@ -35,6 +44,9 @@ filename = os.path.join(save_dir, unquote(os.path.basename(urlparse(image_url).p
 
 # Download the image from the URL and save it to save_dir
 response = requests.get(image_url, timeout=120)
+if not response.ok:
+    # The original file is not available, fall back to the resized copy (same filename)
+    response = requests.get(hdurl, timeout=120)
 response.raise_for_status()
 with open(filename, 'wb') as f:
     f.write(response.content)
@@ -44,4 +56,5 @@ image_path = os.path.abspath(filename)
 
 # Set the wallpaper
 SPI_SETDESKWALLPAPER = 20
-ctypes.windll.user32.SystemParametersInfoW(SPI_SETDESKWALLPAPER, 0, image_path, 3)
+if not ctypes.windll.user32.SystemParametersInfoW(SPI_SETDESKWALLPAPER, 0, image_path, 3):
+    raise SystemExit('Failed to set the wallpaper')
