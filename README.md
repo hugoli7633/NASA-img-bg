@@ -1,7 +1,7 @@
 # NASA-img-bg
 Setup NASA picture as desktop background
 
-每次开机自动下载 NASA 每日天文图片（APOD）的原图并设为 Windows 桌面背景。如果当天发布的是视频，会自动使用最近一天的图片。
+每次开机自动下载 NASA 每日天文图片（APOD）的原图并设为 Windows 桌面背景。
 
 > 原先使用的 `api.nasa.gov/planetary/apod` 接口现在返回的是 NASA 的 logo 而不是当天图片，所以脚本改为读取 NASA 官方的 APOD RSS（ https://science.nasa.gov/feed/apod-basic/ ），不再需要 API KEY。
 
