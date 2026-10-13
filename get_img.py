@@ -1,33 +1,54 @@
 import requests
 import os
 import ctypes
-import subprocess
+import time
+import xml.etree.ElementTree as ET
+from urllib.parse import urlparse, unquote
 
-# API key for NASA
-api_key = 'YOUR_API_KEY'
+# Directory to save the downloaded images (absolute path)
+# A drive other than C: is recommended, e.g. r'D:\NASA_APOD'. Do NOT use the Startup folder
+save_dir = os.path.join(os.path.expanduser('~'), 'Pictures', 'NASA_APOD')
 
-# URL for NASA Image of the Day API
-url = 'https://api.nasa.gov/planetary/apod'
+# RSS feed of NASA Astronomy Picture of the Day
+# (api.nasa.gov/planetary/apod now returns the NASA logo instead of the picture, so use the feed)
+url = 'https://science.nasa.gov/feed/apod-basic/'
 
-# Parameters for the API request
-params = {
-    'api_key': api_key,
-    'hd': True  # Download high-definition image if available
-}
+# Send the request and get the response
+# Right after startup the network may not be ready yet, so retry every 10 seconds
+for attempt in range(10):
+    try:
+        response = requests.get(url, timeout=30)
+        response.raise_for_status()
+        break
+    except requests.RequestException:
+        if attempt == 9:
+            raise
+        time.sleep(10)
+root = ET.fromstring(response.content)
 
+# The feed lists recent APODs, newest first. Some days are videos, so take the newest image
+image_url = None
+for item in root.iter('item'):
+    hdurl = item.findtext('{https://science.nasa.gov/apod/}hdurl')
+    if hdurl and urlparse(hdurl).path.lower().endswith(('.jpg', '.jpeg', '.png')):
+        # hdurl points to a resized copy, use the original file instead
+        image_url = hdurl.split('?')[0].replace('/dynamicimage/assets/science/', '/content/dam/science/')
+        break
 
-# Send the API request and get the response
-response = requests.get(url, params=params)
-
-# Get the URL of the image from the API response
-image_url = response.json()['hdurl']
+if image_url is None:
+    raise SystemExit('No APOD image found in the feed')
 
 # Get the filename of the image from the URL
-filename = os.path.basename(image_url)
+os.makedirs(save_dir, exist_ok=True)
+filename = os.path.join(save_dir, unquote(os.path.basename(urlparse(image_url).path)))
 
-# Download the image from the URL and save it to the current directory
+# Download the image from the URL and save it to save_dir
+response = requests.get(image_url, timeout=120)
+if not response.ok:
+    # The original file is not available, fall back to the resized copy (same filename)
+    response = requests.get(hdurl, timeout=120)
+response.raise_for_status()
 with open(filename, 'wb') as f:
-    response = requests.get(image_url)
     f.write(response.content)
 
 # Path to the downloaded image
@@ -35,8 +56,5 @@ image_path = os.path.abspath(filename)
 
 # Set the wallpaper
 SPI_SETDESKWALLPAPER = 20
-ctypes.windll.user32.SystemParametersInfoW(SPI_SETDESKWALLPAPER, 0, image_path, 3)
-
-subprocess.call('TASKKILL /F /PID ' + str(os.getpid()), shell=True)
-
-
+if not ctypes.windll.user32.SystemParametersInfoW(SPI_SETDESKWALLPAPER, 0, image_path, 3):
+    raise SystemExit('Failed to set the wallpaper')
